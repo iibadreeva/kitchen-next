@@ -1,47 +1,47 @@
-# Header routing & modules — design
+# Header: роутинг и модули — дизайн
 
-Date: 2026-09-10  
-Scope: `src/components/UI/header/` (refactor of current `header.tsx`)  
-Supersedes in spirit: `2026-09-09-header-architecture-refactor-design.md` (in-file split + `window`-based active). This design replaces that active-href approach.
+Дата: 2026-09-10  
+Область: `src/components/UI/header/` (рефакторинг текущего `header.tsx`)  
+По смыслу заменяет: `2026-09-09-header-architecture-refactor-design.md` (in-file split + active через `window`). Этот дизайн убирает подход с `useActiveHref`.
 
-## Goal
+## Цель
 
-Fix Header architecture for Next.js App Router:
+Исправить архитектуру Header под Next.js App Router:
 
-1. **Critical** — active nav from `usePathname`, no `window` / hash / popstate
-2. **Maintainability** — single nav/auth config and one `AuthActions` for desktop + mobile
-3. **Structure** — light `header/` module split as a consequence of (1)–(2), not for its own sake
+1. **Критично** — active nav через `usePathname`, без `window` / hash / popstate
+2. **Поддержка** — единый конфиг nav/auth и один `AuthActions` для desktop + mobile
+3. **Структура** — лёгкий split в `header/` как следствие пунктов (1)–(2), не ради самого пиления
 
-## Non-goals
+## Вне scope
 
-- Visual redesign or `globals.css` / `site-header*` class changes
-- Mobile a11y upgrades (Escape, focus trap, click-outside) beyond current behavior
-- Real auth state / roles / profile menu
-- App-wide folder architecture outside Header
+- Визуальный редизайн или правки `globals.css` / классов `site-header*`
+- A11y мобильного меню (Escape, focus trap, click-outside) сверх текущего поведения
+- Реальный auth-state / роли / меню профиля
+- Архитектура всего `src/` за пределами Header
 
-## Approach
+## Подход
 
-Approach 2 from brainstorming: pathname-based active state + shared config/components, then split along natural seams into `components/UI/header/`.
+Вариант 2 из brainstorming: active по pathname + общий конфиг/компоненты, затем разбиение по естественным швам в `components/UI/header/`.
 
-## File structure
+## Структура файлов
 
 ```
 src/components/UI/header/
   index.ts            # re-export default Header
-  header.tsx          # shell: brand, desktop nav, auth, burger, mobile menu
-  nav-config.ts       # NAV_ITEMS, AUTH_ITEMS
-  nav-link.tsx        # one link; variant: desktop | mobile
+  header.tsx          # оболочка: brand, desktop nav, auth, burger, mobile menu
+  nav-config.ts       # NAV_ITEMS, AUTH_ITEMS, isNavActive
+  nav-link.tsx        # одна ссылка; variant: desktop | mobile
   desktop-nav.tsx     # map NAV_ITEMS → NavLink
-  mobile-menu.tsx     # panel + nav + AuthActions; closes on link click
+  mobile-menu.tsx     # панель + nav + AuthActions; закрытие по клику
   auth-actions.tsx    # Войти / Регистрация; variant: bar | menu
-  brand-mark.tsx      # SVG mark
+  brand-mark.tsx      # SVG-марка
 ```
 
-- Replace monolithic `src/components/UI/header.tsx` with the `header/` directory (no leftover sibling `header.tsx`).
-- `layout.tsx` imports `@/components/UI/header` via `index.ts`.
-- Preserve existing class names (`site-header`, `site-header__glow`, `site-header__mark`, `site-header__link`, `site-header__cta`, etc.).
+- Заменить монолитный `src/components/UI/header.tsx` на каталог `header/` (без соседнего `header.tsx`).
+- `layout.tsx` импортирует `@/components/UI/header` через `index.ts`.
+- Сохранить существующие классы (`site-header`, `site-header__glow`, `site-header__mark`, `site-header__link`, `site-header__cta` и т.д.).
 
-## Config (`nav-config.ts`)
+## Конфиг (`nav-config.ts`)
 
 ```ts
 export type NavItem = { href: string; label: string };
@@ -63,11 +63,11 @@ export const AUTH_ITEMS: AuthItem[] = [
 ];
 ```
 
-No `isActive` on config items. Auth items are placeholders until real auth; they do not participate in active state.
+В конфиге нет `isActive`. Auth-пункты — плейсхолдеры до реального auth; в active state не участвуют.
 
 ## Active state
 
-Remove `useActiveHref` entirely (no `window`, `hashchange`, or `popstate`).
+Полностью удалить `useActiveHref` (без `window`, `hashchange`, `popstate`).
 
 ```ts
 export function isNavActive(pathname: string, href: string): boolean {
@@ -76,43 +76,43 @@ export function isNavActive(pathname: string, href: string): boolean {
 }
 ```
 
-- `Header` calls `usePathname()` once and passes `pathname` into `DesktopNav` and `MobileMenu`.
-- Brand `/` is not in `NAV_ITEMS` today; the `/` branch is for correctness if it is added later and to avoid marking every route active.
-- Auth links never set `aria-current`.
-- Put `isNavActive` in `nav-config.ts` next to the item types (pure helper, no React).
+- `Header` один раз вызывает `usePathname()` и передаёт `pathname` в `DesktopNav` и `MobileMenu`.
+- Brand `/` сейчас не в `NAV_ITEMS`; ветка для `/` нужна на будущее и чтобы не помечать все маршруты active.
+- Auth-ссылки никогда не ставят `aria-current`.
+- `isNavActive` лежит в `nav-config.ts` рядом с типами (чистый хелпер, без React).
 
-## Routing / links
+## Роутинг / ссылки
 
-- Internal nav and brand: `next/link` with the existing Tailwind classes (HeroUI v3 `Link` is not used for App Router routes in this refactor).
-- Auth `#login` / `#signup`: native `<a href="...">` without active styling; still close the mobile menu on click when rendered inside it.
+- Внутренний nav и brand: `next/link` с текущими Tailwind-классами (HeroUI v3 `Link` в этом рефакторе для App Router-маршрутов не используем).
+- Auth `#login` / `#signup`: нативный `<a href="...">` без active-стилей; в mobile-меню по клику по-прежнему закрывают меню.
 
-## Components & state
+## Компоненты и состояние
 
-| Unit | Responsibility |
-|------|----------------|
-| `Header` | `isOpen`, `useId` for `aria-controls`, body `overflow` lock, `usePathname`; composes brand, `DesktopNav`, `AuthActions variant="bar"`, burger, `MobileMenu` |
-| `DesktopNav` / `MobileMenu` | Receive `pathname`; map `NAV_ITEMS` → `NavLink` via `isNavActive` |
-| `NavLink` | Presentational: `href`, `label`, `isActive`, `variant`, optional `onClick`; `aria-current="page"` when active |
-| `AuthActions` | Single implementation for bar + menu from `AUTH_ITEMS`; menu variant accepts `onClose` |
-| `BrandMark` | SVG only |
+| Юнит | Ответственность |
+|------|-----------------|
+| `Header` | `isOpen`, `useId` для `aria-controls`, lock `overflow` у body, `usePathname`; собирает brand, `DesktopNav`, `AuthActions variant="bar"`, burger, `MobileMenu` |
+| `DesktopNav` / `MobileMenu` | Принимают `pathname`; мапят `NAV_ITEMS` → `NavLink` через `isNavActive` |
+| `NavLink` | Только UI: `href`, `label`, `isActive`, `variant`, опциональный `onClick`; `aria-current="page"` при active |
+| `AuthActions` | Одна реализация для bar и menu из `AUTH_ITEMS`; у menu-варианта — `onClose` |
+| `BrandMark` | Только SVG |
 
-Mobile menu close-on-nav and overflow restore stay as today.
+Закрытие mobile-меню по клику на ссылку и восстановление overflow — как сейчас.
 
-## Testing / verification
+## Проверка
 
-Manual:
+Вручную:
 
-1. `/` → no NAV item active
-2. `/recipes` and `/recipes/anything` → «Рецепты» active (desktop + mobile)
-3. `/favorites`, `/about` → matching items active
-4. Nav clicks → client navigation; active updates without full reload
-5. Open mobile menu → click link → menu closes; body overflow restored
-6. Visual spot-check: brand, CTA, sticky header unchanged at `md` and below
+1. `/` — ни один пункт NAV не active
+2. `/recipes` и `/recipes/anything` — «Рецепты» active (desktop + mobile)
+3. `/favorites`, `/about` — соответствующие пункты active
+4. Клики по nav — client navigation; active обновляется без полного reload
+5. Открыть mobile-меню → клик по ссылке → меню закрывается; overflow у body восстанавливается
+6. Визуально: brand, CTA, sticky header без намеренных изменений на `md` и ниже
 
-## Success criteria
+## Критерии успеха
 
-- No `window` / hash / popstate usage in Header
-- Active driven by `usePathname` + `isNavActive`
-- Shared `NAV_ITEMS` / `AUTH_ITEMS` and one `AuthActions`
-- Modules under `components/UI/header/` as above
-- No intentional visual/CSS changes; no a11y/auth-state expansion in this change
+- В Header нет `window` / hash / popstate
+- Active через `usePathname` + `isNavActive`
+- Общие `NAV_ITEMS` / `AUTH_ITEMS` и один `AuthActions`
+- Модули в `components/UI/header/` как выше
+- Без намеренных визуальных/CSS-изменений; без расширения a11y/auth-state в этом изменении
