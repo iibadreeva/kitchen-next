@@ -11,15 +11,11 @@ import {
   cn,
 } from "@heroui/react";
 import { useState, type FormEvent } from "react";
+import { FormDataType } from "@/types/form-data";
+import { registerUser } from "@/actions/register";
 
 type Props = {
   onClose: () => void;
-};
-
-type RegistrationFields = {
-  email: string;
-  password: string;
-  confirmPassword: string;
 };
 
 const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
@@ -29,21 +25,26 @@ function isValidEmail(email: string) {
 }
 
 const RegistrationForm = ({ onClose }: Props) => {
-  const [formData, setFormData] = useState<RegistrationFields>({
+  const [formData, setFormData] = useState<FormDataType>({
     email: "",
     password: "",
     confirmPassword: "",
   });
 
-  const updateField = <K extends keyof RegistrationFields>(
+  const updateField = <K extends keyof FormDataType>(
     field: K,
-    value: RegistrationFields[K],
+    value: FormDataType[K],
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("submited", formData);
+
+    const result = await registerUser(formData);
+    console.log("result", result);
+
     onClose();
   };
 
