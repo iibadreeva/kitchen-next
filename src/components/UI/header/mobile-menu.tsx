@@ -1,7 +1,7 @@
 import { cn } from "@heroui/react";
 
 import { AuthActions } from "./auth-actions";
-import { NAV_ITEMS, isNavActive } from "./nav-config";
+import { NAV_ITEMS, isNavActive, type AuthAction } from "./nav-config";
 import { NavLink } from "./nav-link";
 
 export function MobileMenu({
@@ -9,11 +9,13 @@ export function MobileMenu({
   isOpen,
   pathname,
   onClose,
+  onAuthAction,
 }: {
   id: string;
   isOpen: boolean;
   pathname: string;
   onClose: () => void;
+  onAuthAction: (action: AuthAction) => void;
 }) {
   return (
     <div
@@ -39,7 +41,13 @@ export function MobileMenu({
           </li>
         ))}
         <li className="mt-2 grid gap-2 border-t border-[var(--kitchen-ink)]/8 pt-4">
-          <AuthActions variant="menu" onClose={onClose} />
+          <AuthActions
+            variant="menu"
+            onAction={(action) => {
+              onClose();
+              onAuthAction(action);
+            }}
+          />
         </li>
       </ul>
     </div>

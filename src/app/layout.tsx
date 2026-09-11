@@ -4,6 +4,8 @@ import { Geist, Geist_Mono, Unbounded } from "next/font/google";
 import { Providers } from "@/providers/providers";
 import "./globals.css";
 import Header from "@/components/UI/header";
+import { siteConfig } from "@/config/site.config";
+import { layoutConfig } from "@/config/layout.config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,8 +24,8 @@ const display = Unbounded({
 });
 
 export const metadata: Metadata = {
-  title: "Русская кухня",
-  description: "Рецепты кухни",
+  title: siteConfig.title,
+  description: siteConfig.description,
 };
 
 export default function RootLayout({
@@ -39,7 +41,15 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <Providers>
           <Header />
-          {children}
+
+          <main className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+            {children}
+          </main>
+          <footer
+            className={`flex h-[${layoutConfig.footerHeight}] items-center justify-center bg-zinc-50 p-4 dark:bg-black`}
+          >
+            <p>{siteConfig.description}</p>
+          </footer>
         </Providers>
       </body>
     </html>

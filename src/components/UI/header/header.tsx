@@ -4,13 +4,23 @@ import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import LoginModal from "@/components/UI/modals/login.modal";
+import RegistrationModal from "@/components/UI/modals/registration.modal";
+import { layoutConfig } from "@/config/layout.config";
+import { siteConfig } from "@/config/site.config";
+
 import { AuthActions } from "./auth-actions";
 import { BrandMark } from "./brand-mark";
 import { DesktopNav } from "./desktop-nav";
 import { MobileMenu } from "./mobile-menu";
+import type { AuthAction } from "./nav-config";
+
+type AuthModal = null | AuthAction;
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [authModal, setAuthModal] = useState<AuthModal>(null);
+
   const menuId = useId();
   const pathname = usePathname();
 
@@ -21,11 +31,18 @@ export default function Header() {
     };
   }, [isOpen]);
 
+  const openAuth = (action: AuthAction) => {
+    setAuthModal(action);
+  };
+
   return (
-    <nav className="site-header sticky top-0 z-40 w-full">
+    <nav
+      className={`site-header h-[${layoutConfig.headerHeight}] sticky top-0 z-40 w-full`}
+    >
       <div className="site-header__glow" aria-hidden />
       <header className="relative mx-auto flex h-[4.25rem] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
+          title={siteConfig.title}
           href="/"
           className="group relative z-10 flex items-center gap-3 text-[var(--kitchen-ink)] no-underline outline-none"
         >
@@ -34,7 +51,7 @@ export default function Header() {
           </span>
           <span className="flex flex-col leading-none">
             <span className="font-[family-name:var(--font-display)] text-[1.15rem] font-semibold tracking-[-0.03em] sm:text-[1.35rem]">
-              Русская кухня
+              {siteConfig.title}
             </span>
             <span className="mt-1 text-[0.68rem] font-medium tracking-[0.18em] text-[var(--kitchen-sage)] uppercase">
               домашние рецепты
@@ -45,7 +62,7 @@ export default function Header() {
         <DesktopNav pathname={pathname} />
 
         <div className="relative z-10 flex items-center gap-2 sm:gap-3">
-          <AuthActions variant="bar" />
+          <AuthActions variant="bar" onAction={openAuth} />
 
           <button
             type="button"
@@ -85,6 +102,16 @@ export default function Header() {
         isOpen={isOpen}
         pathname={pathname}
         onClose={() => setIsOpen(false)}
+        onAuthAction={openAuth}
+      />
+
+      <LoginModal
+        isOpen={authModal === "login"}
+        onClose={() => setAuthModal(null)}
+      />
+      <RegistrationModal
+        isOpen={authModal === "signup"}
+        onClose={() => setAuthModal(null)}
       />
     </nav>
   );

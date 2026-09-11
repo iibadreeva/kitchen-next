@@ -1,13 +1,13 @@
 import { buttonVariants, cn } from "@heroui/react";
 
-import { AUTH_ITEMS } from "./nav-config";
+import { AUTH_ITEMS, type AuthAction } from "./nav-config";
 
 export function AuthActions({
   variant,
-  onClose,
+  onAction,
 }: {
   variant: "bar" | "menu";
-  onClose?: () => void;
+  onAction: (action: AuthAction) => void;
 }) {
   return (
     <>
@@ -16,39 +16,40 @@ export function AuthActions({
 
         if (variant === "bar") {
           return (
-            <a
-              key={item.href}
-              href={item.href}
+            <button
+              key={item.action}
+              type="button"
               className={
                 isCta
                   ? cn(
                       buttonVariants({ variant: "primary" }),
                       "site-header__cta hidden sm:inline-flex",
                     )
-                  : "hidden text-[0.95rem] text-[var(--kitchen-ink)]/75 no-underline transition-colors hover:text-[var(--kitchen-ink)] lg:inline"
+                  : "hidden cursor-pointer border-0 bg-transparent p-0 text-[0.95rem] text-[var(--kitchen-ink)]/75 transition-colors hover:text-[var(--kitchen-ink)] lg:inline"
               }
+              onClick={() => onAction(item.action)}
             >
               {item.label}
-            </a>
+            </button>
           );
         }
 
         return (
-          <a
-            key={item.href}
-            href={item.href}
+          <button
+            key={item.action}
+            type="button"
             className={
               isCta
                 ? cn(
                     buttonVariants({ variant: "primary" }),
                     "site-header__cta justify-center",
                   )
-                : "rounded-lg px-3 py-3 text-[var(--kitchen-ink)]/80 no-underline"
+                : "cursor-pointer rounded-lg border-0 bg-transparent px-3 py-3 text-left text-[var(--kitchen-ink)]/80"
             }
-            onClick={onClose}
+            onClick={() => onAction(item.action)}
           >
             {item.label}
-          </a>
+          </button>
         );
       })}
     </>
