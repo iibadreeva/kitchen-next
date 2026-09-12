@@ -10,26 +10,36 @@ import {
   TextField,
   cn,
 } from "@heroui/react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { FormDataType } from "@/types/form-data";
+
 import { registerUser } from "@/actions/register";
+import {
+  emailSchema,
+  passwordSchema,
+  registerSchema,
+  zodFieldError,
+} from "@/lib/zod";
+import { FormDataType } from "@/types/form-data";
+import {
+  isAuthUnavailableCode,
+  parseRateLimitedCode,
+} from "@/utils/auth-messages";
 
 type Props = {
   onClose: () => void;
 };
 
-const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-
-function isValidEmail(email: string) {
-  return EMAIL_REGEX.test(email);
-}
-
 const RegistrationForm = ({ onClose }: Props) => {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormDataType>({
     email: "",
     password: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = <K extends keyof FormDataType>(
     field: K,
@@ -40,12 +50,60 @@ const RegistrationForm = ({ onClose }: Props) => {
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("submited", formData);
+    setError(null);
 
-    const result = await registerUser(formData);
-    console.log("result", result);
+    const parsed = registerSchema.safeParse(formData);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Некорректные данные");
+      return;
+    }
 
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      const result = await registerUser(parsed.data);
+
+      if ("error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+
+      const email =
+        "user" in result && result.user?.email
+          ? result.user.email
+          : parsed.data.email;
+
+      const signInResult = await signIn("credentials", {
+        email,
+        password: parsed.data.password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        if (isAuthUnavailableCode(signInResult.code)) {
+          setError(
+            "Аккаунт создан, но вход временно недоступен. Войдите вручную чуть позже.",
+          );
+          return;
+        }
+        const limited = parseRateLimitedCode(signInResult.code);
+        setError(
+          limited.limited
+            ? limited.retryAfterSec
+              ? `Аккаунт создан, но слишком много попыток входа. Подождите ${limited.retryAfterSec} сек. и войдите вручную.`
+              : "Аккаунт создан, но слишком много попыток входа. Войдите вручную чуть позже."
+            : "Аккаунт создан, но войти не удалось. Попробуйте войти вручную.",
+        );
+        return;
+      }
+
+      router.refresh();
+      onClose();
+    } catch {
+      setError("Ошибка при регистрации");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -57,11 +115,7 @@ const RegistrationForm = ({ onClose }: Props) => {
         type="email"
         value={formData.email}
         onChange={(value) => updateField("email", value)}
-        validate={(value) => {
-          if (!value) return "Почта обязательна";
-          if (!isValidEmail(value)) return "Некорректный email";
-          return null;
-        }}
+        validate={(value) => zodFieldError(emailSchema.safeParse(value))}
         className="auth-form__field"
       >
         <Label>Email</Label>
@@ -77,18 +131,7 @@ const RegistrationForm = ({ onClose }: Props) => {
         type="password"
         value={formData.password}
         onChange={(value) => updateField("password", value)}
-        validate={(value) => {
-          if (value.length < 8) {
-            return "Пароль должен содержать не менее 8 символов.";
-          }
-          if (!/[A-Z]/.test(value)) {
-            return "Пароль должен содержать как минимум одну заглавную букву.";
-          }
-          if (!/[0-9]/.test(value)) {
-            return "Пароль должен содержать как минимум одну цифру.";
-          }
-          return null;
-        }}
+        validate={(value) => zodFieldError(passwordSchema.safeParse(value))}
         className="auth-form__field"
       >
         <Label>Пароль</Label>
@@ -108,12 +151,8 @@ const RegistrationForm = ({ onClose }: Props) => {
         value={formData.confirmPassword}
         onChange={(value) => updateField("confirmPassword", value)}
         validate={(value) => {
-          if (!value) {
-            return "Пароль для подтверждения обязателен";
-          }
-          if (value !== formData.password) {
-            return "Пароли не совпадают";
-          }
+          if (!value) return "Пароль для подтверждения обязателен";
+          if (value !== formData.password) return "Пароли не совпадают";
           return null;
         }}
         className="auth-form__field"
@@ -123,20 +162,28 @@ const RegistrationForm = ({ onClose }: Props) => {
         <FieldError />
       </TextField>
 
+      {error ? (
+        <p className="text-sm text-[var(--kitchen-beet)]" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <div className="auth-form__actions">
         <Button
           type="button"
           variant="secondary"
           className="auth-form__cancel"
           onPress={onClose}
+          isDisabled={isSubmitting}
         >
           Отмена
         </Button>
         <Button
           type="submit"
           className={cn("auth-form__submit", "site-header__cta")}
+          isDisabled={isSubmitting}
         >
-          Зарегистрироваться
+          {isSubmitting ? "Регистрация…" : "Зарегистрироваться"}
         </Button>
       </div>
     </Form>

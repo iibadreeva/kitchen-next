@@ -46,7 +46,8 @@ export default function RootLayout({
             {children}
           </main>
           <footer
-            className={`flex h-[${layoutConfig.footerHeight}] items-center justify-center bg-zinc-50 p-4 dark:bg-black`}
+            className="flex items-center justify-center bg-zinc-50 p-4 dark:bg-black"
+            style={{ height: layoutConfig.footerHeight }}
           >
             <p>{siteConfig.description}</p>
           </footer>
