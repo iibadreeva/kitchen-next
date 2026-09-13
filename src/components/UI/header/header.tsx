@@ -8,18 +8,18 @@ import LoginModal from "@/components/UI/modals/login.modal";
 import RegistrationModal from "@/components/UI/modals/registration.modal";
 import { layoutConfig } from "@/config/layout.config";
 import { siteConfig } from "@/config/site.config";
+import { useAuthStore } from "@/store/auth.store";
 
 import { AuthActions } from "./auth-actions";
 import { BrandMark } from "./brand-mark";
 import { DesktopNav } from "./desktop-nav";
 import { MobileMenu } from "./mobile-menu";
-import type { AuthAction } from "./nav-config";
-
-type AuthModal = null | AuthAction;
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const [authModal, setAuthModal] = useState<AuthModal>(null);
+  const modal = useAuthStore((s) => s.modal);
+  const openModal = useAuthStore((s) => s.openModal);
+  const closeModal = useAuthStore((s) => s.closeModal);
 
   const menuId = useId();
   const pathname = usePathname();
@@ -30,10 +30,6 @@ export default function Header() {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
-
-  const openAuth = (action: AuthAction) => {
-    setAuthModal(action);
-  };
 
   return (
     <nav
@@ -62,7 +58,7 @@ export default function Header() {
         <DesktopNav pathname={pathname} />
 
         <div className="relative z-10 flex items-center gap-2 sm:gap-3">
-          <AuthActions variant="bar" onAction={openAuth} />
+          <AuthActions variant="bar" />
 
           <button
             type="button"
@@ -102,17 +98,14 @@ export default function Header() {
         isOpen={isOpen}
         pathname={pathname}
         onClose={() => setIsOpen(false)}
-        onAuthAction={openAuth}
+        onAuthAction={(action) => {
+          setIsOpen(false);
+          openModal(action);
+        }}
       />
 
-      <LoginModal
-        isOpen={authModal === "login"}
-        onClose={() => setAuthModal(null)}
-      />
-      <RegistrationModal
-        isOpen={authModal === "signup"}
-        onClose={() => setAuthModal(null)}
-      />
+      <LoginModal isOpen={modal === "login"} onClose={closeModal} />
+      <RegistrationModal isOpen={modal === "signup"} onClose={closeModal} />
     </nav>
   );
 }

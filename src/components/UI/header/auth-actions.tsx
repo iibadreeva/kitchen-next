@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
 import { buttonVariants, cn } from "@heroui/react";
 
+import { useAuthStore } from "@/store/auth.store";
 import { getUserDisplayName } from "@/utils/display-name";
 
 import { AUTH_ITEMS, type AuthAction } from "./nav-config";
@@ -33,13 +31,18 @@ export function AuthActions({
   onAction,
 }: {
   variant: "bar" | "menu";
-  onAction: (action: AuthAction) => void;
+  onAction?: (action: AuthAction) => void;
 }) {
-  const router = useRouter();
-  const { data: session, status } = useSession();
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const sessionUser = useAuthStore((s) => s.sessionUser);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const op = useAuthStore((s) => s.op);
+  const logoutError = useAuthStore((s) => s.logoutError);
+  const openModal = useAuthStore((s) => s.openModal);
+  const logout = useAuthStore((s) => s.logout);
+  const clearLogoutError = useAuthStore((s) => s.clearLogoutError);
+  const isSigningOut = op === "logout";
 
-  if (status === "loading") {
+  if (sessionStatus === "loading") {
     return (
       <div
         className={cn(
@@ -58,8 +61,8 @@ export function AuthActions({
     );
   }
 
-  if (status === "authenticated" && session?.user) {
-    const label = getUserDisplayName(session.user);
+  if (sessionStatus === "authenticated" && sessionUser) {
+    const label = getUserDisplayName(sessionUser);
 
     return (
       <div
@@ -75,25 +78,28 @@ export function AuthActions({
           </div>
         ) : null}
         {label ? <span className="site-header__session-rule" aria-hidden /> : null}
-        <button
-          type="button"
-          className="site-header__signout"
-          disabled={isSigningOut}
-          onClick={async () => {
-            if (isSigningOut) return;
-            setIsSigningOut(true);
-            try {
-              await signOut({ redirect: false });
-              router.refresh();
-            } catch (error) {
-              console.error("Ошибка выхода:", error);
-            } finally {
-              setIsSigningOut(false);
-            }
-          }}
-        >
-          {isSigningOut ? "Выход…" : "Выйти"}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            className="site-header__signout"
+            disabled={isSigningOut}
+            onClick={async () => {
+              if (isSigningOut) return;
+              clearLogoutError();
+              await logout();
+            }}
+          >
+            {isSigningOut ? "Выход…" : "Выйти"}
+          </button>
+          {logoutError && !isSigningOut ? (
+            <p
+              className="max-w-[12rem] text-right text-xs text-[var(--kitchen-beet)]"
+              role="alert"
+            >
+              {logoutError}
+            </p>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -110,7 +116,13 @@ export function AuthActions({
             className={
               isCta ? ctaClass(variant) : ghostClass(variant, variant === "bar")
             }
-            onClick={() => onAction(item.action)}
+            onClick={() => {
+              if (onAction) {
+                onAction(item.action);
+                return;
+              }
+              openModal(item.action);
+            }}
           >
             {item.label}
           </button>

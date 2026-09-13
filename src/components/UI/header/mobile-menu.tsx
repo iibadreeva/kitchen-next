@@ -41,13 +41,7 @@ export function MobileMenu({
           </li>
         ))}
         <li className="mt-2 grid gap-2 border-t border-[var(--kitchen-ink)]/8 pt-4">
-          <AuthActions
-            variant="menu"
-            onAction={(action) => {
-              onClose();
-              onAuthAction(action);
-            }}
-          />
+          <AuthActions variant="menu" onAction={onAuthAction} />
         </li>
       </ul>
     </div>

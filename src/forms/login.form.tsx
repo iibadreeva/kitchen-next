@@ -9,8 +9,6 @@ import {
   TextField,
   cn,
 } from "@heroui/react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import {
@@ -19,12 +17,7 @@ import {
   signInSchema,
   zodFieldError,
 } from "@/lib/zod";
-import {
-  authUnavailableMessage,
-  isAuthUnavailableCode,
-  parseRateLimitedCode,
-  rateLimitedMessage,
-} from "@/utils/auth-messages";
+import { useAuthStore } from "@/store/auth.store";
 
 type Props = {
   onClose: () => void;
@@ -36,13 +29,17 @@ type LoginFields = {
 };
 
 const LoginForm = ({ onClose }: Props) => {
-  const router = useRouter();
+  const login = useAuthStore((s) => s.login);
+  const error = useAuthStore((s) => s.error);
+  const op = useAuthStore((s) => s.op);
+  const clearError = useAuthStore((s) => s.clearError);
+  const isSubmitting = op === "login";
+
   const [formData, setFormData] = useState<LoginFields>({
     email: "",
     password: "",
   });
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const updateField = <K extends keyof LoginFields>(
     field: K,
@@ -53,45 +50,19 @@ const LoginForm = ({ onClose }: Props) => {
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
+    setLocalError(null);
+    clearError();
 
     const parsed = signInSchema.safeParse(formData);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Некорректные данные");
+      setLocalError(parsed.error.issues[0]?.message ?? "Некорректные данные");
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      const result = await signIn("credentials", {
-        email: parsed.data.email,
-        password: parsed.data.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        if (isAuthUnavailableCode(result.code)) {
-          setError(authUnavailableMessage());
-          return;
-        }
-        const limited = parseRateLimitedCode(result.code);
-        setError(
-          limited.limited
-            ? rateLimitedMessage(limited.retryAfterSec)
-            : "Неверный email или пароль",
-        );
-        return;
-      }
-
-      router.refresh();
-      onClose();
-    } catch {
-      setError("Не удалось войти");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await login(parsed.data);
   };
+
+  const displayError = localError ?? error;
 
   return (
     <Form className="auth-form" onSubmit={onSubmit}>
@@ -127,9 +98,9 @@ const LoginForm = ({ onClose }: Props) => {
         <FieldError />
       </TextField>
 
-      {error ? (
+      {displayError ? (
         <p className="text-sm text-[var(--kitchen-beet)]" role="alert">
-          {error}
+          {displayError}
         </p>
       ) : null}
 

@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
  * trustHost включайте в production только за доверенным прокси,
  * который перезаписывает proxy-заголовки.
  */
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   trustHost:
     process.env.NODE_ENV !== "production" ||

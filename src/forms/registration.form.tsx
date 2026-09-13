@@ -10,36 +10,34 @@ import {
   TextField,
   cn,
 } from "@heroui/react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { registerUser } from "@/actions/register";
 import {
   emailSchema,
   passwordSchema,
   registerSchema,
   zodFieldError,
 } from "@/lib/zod";
+import { useAuthStore } from "@/store/auth.store";
 import { FormDataType } from "@/types/form-data";
-import {
-  isAuthUnavailableCode,
-  parseRateLimitedCode,
-} from "@/utils/auth-messages";
 
 type Props = {
   onClose: () => void;
 };
 
 const RegistrationForm = ({ onClose }: Props) => {
-  const router = useRouter();
+  const register = useAuthStore((s) => s.register);
+  const error = useAuthStore((s) => s.error);
+  const op = useAuthStore((s) => s.op);
+  const clearError = useAuthStore((s) => s.clearError);
+  const isSubmitting = op === "register";
+
   const [formData, setFormData] = useState<FormDataType>({
     email: "",
     password: "",
     confirmPassword: "",
   });
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const updateField = <K extends keyof FormDataType>(
     field: K,
@@ -50,61 +48,19 @@ const RegistrationForm = ({ onClose }: Props) => {
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
+    setLocalError(null);
+    clearError();
 
     const parsed = registerSchema.safeParse(formData);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Некорректные данные");
+      setLocalError(parsed.error.issues[0]?.message ?? "Некорректные данные");
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      const result = await registerUser(parsed.data);
-
-      if ("error" in result && result.error) {
-        setError(result.error);
-        return;
-      }
-
-      const email =
-        "user" in result && result.user?.email
-          ? result.user.email
-          : parsed.data.email;
-
-      const signInResult = await signIn("credentials", {
-        email,
-        password: parsed.data.password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        if (isAuthUnavailableCode(signInResult.code)) {
-          setError(
-            "Аккаунт создан, но вход временно недоступен. Войдите вручную чуть позже.",
-          );
-          return;
-        }
-        const limited = parseRateLimitedCode(signInResult.code);
-        setError(
-          limited.limited
-            ? limited.retryAfterSec
-              ? `Аккаунт создан, но слишком много попыток входа. Подождите ${limited.retryAfterSec} сек. и войдите вручную.`
-              : "Аккаунт создан, но слишком много попыток входа. Войдите вручную чуть позже."
-            : "Аккаунт создан, но войти не удалось. Попробуйте войти вручную.",
-        );
-        return;
-      }
-
-      router.refresh();
-      onClose();
-    } catch {
-      setError("Ошибка при регистрации");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await register(parsed.data);
   };
+
+  const displayError = localError ?? error;
 
   return (
     <Form className="auth-form" onSubmit={onSubmit}>
@@ -162,9 +118,9 @@ const RegistrationForm = ({ onClose }: Props) => {
         <FieldError />
       </TextField>
 
-      {error ? (
+      {displayError ? (
         <p className="text-sm text-[var(--kitchen-beet)]" role="alert">
-          {error}
+          {displayError}
         </p>
       ) : null}
 
