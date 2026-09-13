@@ -1,3 +1,7 @@
+/**
+ * Auth rate-limit: раздельные бакеты email / IP + одноразовый login-bypass
+ * после регистрации (чтобы auto-signIn не упирался в login-лимит).
+ */
 import { UNKNOWN_IP } from "@/utils/client-ip";
 import {
   consumeRateLimit,
@@ -9,22 +13,27 @@ import {
 import { getRateLimitStore } from "@/utils/rate-limit-store";
 import { isBucketActive } from "@/utils/rate-limit-bucket";
 
+/** Параметры лимита для login или register. */
 type AuthRateLimitInput = {
   action: "login" | "register";
+  /** Клиентский IP; `UNKNOWN_IP` — IP-бакет не трогаем. */
   ip: string;
   email: string;
   limit: number;
   windowMs: number;
 };
 
+/** Ключ бакета по нормализованному email. */
 function emailKey(action: string, email: string) {
   return `${action}:email:${email.trim().toLowerCase()}`;
 }
 
+/** Ключ бакета по IP (не использовать с `UNKNOWN_IP`). */
 function ipKey(action: string, ip: string) {
   return `${action}:ip:${ip}`;
 }
 
+/** Ключ одноразового bypass auto-login после регистрации. */
 function bypassKey(email: string) {
   return `bypass:login:${email.trim().toLowerCase()}`;
 }
@@ -99,6 +108,11 @@ export async function recordAuthRateLimitFailure(
   return consumeAuthRateLimits(input);
 }
 
+/**
+ * Результат `beginLoginRateLimit`.
+ * - `reserved` — лимит уже списан; при успехе пароля нужен refund.
+ * - `hasBypass` — шли через bypass (без reserve); при успехе — take bypass.
+ */
 export type BeginLoginRateLimitResult =
   | { ok: true; hasBypass: boolean; reserved: boolean }
   | { ok: false; retryAfterSec: number; hasBypass: boolean };
@@ -114,6 +128,8 @@ export async function beginLoginRateLimit(
 ): Promise<BeginLoginRateLimitResult> {
   const hasBypass = await hasLoginRateLimitBypass(input.email);
 
+  // Bypass: не reserve'им, но peek обязателен — иначе при пустом бакете
+  // после регистрации можно бесконечно бить bcrypt без списания лимита.
   if (hasBypass) {
     const peek = await peekAuthRateLimits(input);
     if (!peek.ok) {
@@ -127,6 +143,7 @@ export async function beginLoginRateLimit(
   }
 
   const rate = await consumeAuthRateLimits(input);
+  // Обычный путь: лимит уже списан (reserved). При успехе пароля — refund.
   if (!rate.ok) {
     return {
       ok: false,
@@ -137,9 +154,13 @@ export async function beginLoginRateLimit(
   return { ok: true, hasBypass: false, reserved: true };
 }
 
+/** TTL bypass после регистрации (мс). */
 const LOGIN_BYPASS_TTL_MS = 60_000;
 
-/** После успешной регистрации — один login без login-лимита. */
+/**
+ * После успешной регистрации — один login без login-лимита (reserve).
+ * Не отменяет уже исчерпанный бакет: `beginLoginRateLimit` всё равно делает peek.
+ */
 export async function grantLoginRateLimitBypass(
   email: string,
   ttlMs = LOGIN_BYPASS_TTL_MS,
@@ -163,11 +184,16 @@ export async function grantLoginRateLimitBypassSafe(email: string) {
   }
 }
 
+/** Есть ли активный (не истёкший) login-bypass для email. */
 export async function hasLoginRateLimitBypass(email: string): Promise<boolean> {
   const bucket = await getRateLimitStore().get(bypassKey(email));
   return isBucketActive(bucket, Date.now());
 }
 
+/**
+ * Атомарно снимает bypass (одноразовый).
+ * `true` — ключ был и удалён; `false` — не было / уже снят.
+ */
 export async function takeLoginRateLimitBypass(email: string): Promise<boolean> {
   return getRateLimitStore().take(bypassKey(email));
 }
