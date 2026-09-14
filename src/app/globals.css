@@ -333,33 +333,33 @@ body {
   color: color-mix(in oklab, var(--kitchen-ink) 55%, transparent);
 }
 
-.auth-form {
+.kitchen-form {
   display: flex;
   width: 100%;
   flex-direction: column;
   gap: 1.1rem;
 }
 
-.auth-form__field {
+.kitchen-form__field {
   width: 100%;
 }
 
-.auth-form__field label {
+.kitchen-form__field label {
   font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0.01em;
   color: color-mix(in oklab, var(--kitchen-ink) 78%, transparent);
 }
 
-.auth-form__field [data-slot="description"],
-.auth-form__field .text-muted,
-.auth-form__field p {
+.kitchen-form__field [data-slot="description"],
+.kitchen-form__field .text-muted,
+.kitchen-form__field p {
   font-size: 0.78rem;
   line-height: 1.4;
   color: color-mix(in oklab, var(--kitchen-ink) 52%, transparent);
 }
 
-.auth-form__actions {
+.kitchen-form__actions {
   display: flex;
   flex-direction: column-reverse;
   gap: 0.65rem;
@@ -367,33 +367,146 @@ body {
 }
 
 @media (min-width: 420px) {
-  .auth-form__actions {
+  .kitchen-form__actions {
     flex-direction: row;
     justify-content: flex-end;
     align-items: center;
   }
 }
 
-.auth-form__cancel {
+.kitchen-form__cancel {
   border-color: rgb(23 32 40 / 0.12) !important;
   background: transparent !important;
   color: color-mix(in oklab, var(--kitchen-ink) 72%, transparent) !important;
 }
 
-.auth-form__cancel:hover {
+.kitchen-form__cancel:hover {
   background: rgb(23 32 40 / 0.04) !important;
   color: var(--kitchen-ink) !important;
 }
 
-.auth-form__submit {
+.kitchen-form__submit {
   min-width: 9.5rem;
 }
 
 @media (max-width: 419px) {
-  .auth-form__submit,
-  .auth-form__cancel {
+  .kitchen-form__submit,
+  .kitchen-form__cancel {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Ingredients */
+.ingredient-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ingredient-page__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ingredient-page__title {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--kitchen-ink);
+}
+
+.ingredient-page__lede {
+  max-width: 36rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--kitchen-ink) 62%, transparent);
+}
+
+.ingredient-page__guest {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in oklab, var(--kitchen-ink) 12%, transparent);
+  background: color-mix(in oklab, var(--kitchen-ink) 3%, white);
+  font-size: 0.92rem;
+  color: color-mix(in oklab, var(--kitchen-ink) 72%, transparent);
+}
+
+.ingredient-form__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+}
+
+@media (min-width: 640px) {
+  .ingredient-form__row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.9fr);
+    gap: 0.85rem;
+    align-items: start;
+  }
+}
+
+.ingredient-form__toast {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  animation: ingredient-toast-in 280ms ease-out;
+}
+
+.ingredient-form__toast--success {
+  background: color-mix(in oklab, var(--kitchen-sage) 10%, white);
+  border-color: color-mix(in oklab, var(--kitchen-sage) 22%, transparent);
+  box-shadow: inset 3px 0 0 var(--kitchen-sage);
+}
+
+.ingredient-form__toast--error {
+  background: color-mix(in oklab, var(--kitchen-beet) 9%, white);
+  border-color: color-mix(in oklab, var(--kitchen-beet) 20%, transparent);
+  box-shadow: inset 3px 0 0 var(--kitchen-beet);
+}
+
+.ingredient-form__toast-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ingredient-form__toast--success .ingredient-form__toast-label {
+  color: var(--kitchen-sage);
+}
+
+.ingredient-form__toast--error .ingredient-form__toast-label {
+  color: var(--kitchen-beet);
+}
+
+.ingredient-form__toast-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: color-mix(in oklab, var(--kitchen-ink) 82%, transparent);
+}
+
+@keyframes ingredient-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ingredient-form__toast {
+    animation: none;
   }
 }
 

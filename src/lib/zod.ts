@@ -1,4 +1,6 @@
-import { email, object, pipe, string } from "zod";
+import { email, enum as zodEnum, object, pipe, string } from "zod";
+
+import { CATEGORY_VALUES, UNIT_VALUES } from "@/constants/select-options";
 
 /** Сообщение первой ошибки Zod для HeroUI Field.validate. */
 export function zodFieldError(
@@ -52,3 +54,44 @@ export const registerSchema = object({
   message: "Пароли не совпадают",
   path: ["confirmPassword"],
 });
+
+export const ingredientNameSchema = string({ error: "Укажите название" })
+  .trim()
+  .min(1, "Укажите название")
+  .min(2, "Название слишком короткое")
+  .max(100, "Название слишком длинное");
+
+export const ingredientCategorySchema = zodEnum(CATEGORY_VALUES, {
+  error: "Выберите категорию",
+});
+
+export const ingredientUnitSchema = zodEnum(UNIT_VALUES, {
+  error: "Выберите единицу измерения",
+});
+
+/** Цена строкой под Decimal(10,2): не больше двух знаков после точки. */
+export const ingredientPriceSchema = string({ error: "Укажите цену" })
+  .trim()
+  .min(1, "Укажите цену")
+  .regex(
+    /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/,
+    "Цена — число с не более чем 2 знаками после точки",
+  )
+  .refine((value) => Number(value) >= 0, "Цена не может быть отрицательной")
+  .refine((value) => Number(value) <= 1_000_000, "Слишком большая цена");
+
+/** Необязательное; пустая строка допустима. */
+export const ingredientDescriptionSchema = string()
+  .trim()
+  .max(500, "Описание слишком длинное");
+
+export const ingredientSchema = object({
+  name: ingredientNameSchema,
+  category: ingredientCategorySchema,
+  unit: ingredientUnitSchema,
+  pricePerUnit: ingredientPriceSchema,
+  description: ingredientDescriptionSchema,
+});
+
+/** Create: тот же контракт, что и форма (цена — строка для Prisma.Decimal). */
+export const ingredientCreateSchema = ingredientSchema;

@@ -63,7 +63,7 @@ const RegistrationForm = ({ onClose }: Props) => {
   const displayError = localError ?? error;
 
   return (
-    <Form className="auth-form" onSubmit={onSubmit}>
+    <Form className="kitchen-form" onSubmit={onSubmit}>
       <TextField
         isRequired
         fullWidth
@@ -72,7 +72,7 @@ const RegistrationForm = ({ onClose }: Props) => {
         value={formData.email}
         onChange={(value) => updateField("email", value)}
         validate={(value) => zodFieldError(emailSchema.safeParse(value))}
-        className="auth-form__field"
+        className="kitchen-form__field"
       >
         <Label>Email</Label>
         <Input placeholder="anna@kitchen.ru" />
@@ -88,7 +88,7 @@ const RegistrationForm = ({ onClose }: Props) => {
         value={formData.password}
         onChange={(value) => updateField("password", value)}
         validate={(value) => zodFieldError(passwordSchema.safeParse(value))}
-        className="auth-form__field"
+        className="kitchen-form__field"
       >
         <Label>Пароль</Label>
         <Input placeholder="Придумайте пароль" />
@@ -111,7 +111,7 @@ const RegistrationForm = ({ onClose }: Props) => {
           if (value !== formData.password) return "Пароли не совпадают";
           return null;
         }}
-        className="auth-form__field"
+        className="kitchen-form__field"
       >
         <Label>Подтвердите пароль</Label>
         <Input placeholder="Повторите пароль" />
@@ -124,11 +124,11 @@ const RegistrationForm = ({ onClose }: Props) => {
         </p>
       ) : null}
 
-      <div className="auth-form__actions">
+      <div className="kitchen-form__actions">
         <Button
           type="button"
           variant="secondary"
-          className="auth-form__cancel"
+          className="kitchen-form__cancel"
           onPress={onClose}
           isDisabled={isSubmitting}
         >
@@ -136,7 +136,7 @@ const RegistrationForm = ({ onClose }: Props) => {
         </Button>
         <Button
           type="submit"
-          className={cn("auth-form__submit", "site-header__cta")}
+          className={cn("kitchen-form__submit", "site-header__cta")}
           isDisabled={isSubmitting}
         >
           {isSubmitting ? "Регистрация…" : "Зарегистрироваться"}

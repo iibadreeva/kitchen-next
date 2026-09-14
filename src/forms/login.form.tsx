@@ -65,7 +65,7 @@ const LoginForm = ({ onClose }: Props) => {
   const displayError = localError ?? error;
 
   return (
-    <Form className="auth-form" onSubmit={onSubmit}>
+    <Form className="kitchen-form" onSubmit={onSubmit}>
       <TextField
         isRequired
         fullWidth
@@ -74,7 +74,7 @@ const LoginForm = ({ onClose }: Props) => {
         value={formData.email}
         onChange={(value) => updateField("email", value)}
         validate={(value) => zodFieldError(emailSchema.safeParse(value))}
-        className="auth-form__field"
+        className="kitchen-form__field"
       >
         <Label>Email</Label>
         <Input placeholder="anna@kitchen.ru" />
@@ -91,7 +91,7 @@ const LoginForm = ({ onClose }: Props) => {
         validate={(value) =>
           zodFieldError(signInPasswordSchema.safeParse(value))
         }
-        className="auth-form__field"
+        className="kitchen-form__field"
       >
         <Label>Пароль</Label>
         <Input placeholder="Ваш пароль" />
@@ -104,11 +104,11 @@ const LoginForm = ({ onClose }: Props) => {
         </p>
       ) : null}
 
-      <div className="auth-form__actions">
+      <div className="kitchen-form__actions">
         <Button
           type="button"
           variant="secondary"
-          className="auth-form__cancel"
+          className="kitchen-form__cancel"
           onPress={onClose}
           isDisabled={isSubmitting}
         >
@@ -116,7 +116,7 @@ const LoginForm = ({ onClose }: Props) => {
         </Button>
         <Button
           type="submit"
-          className={cn("auth-form__submit", "site-header__cta")}
+          className={cn("kitchen-form__submit", "site-header__cta")}
           isDisabled={isSubmitting}
         >
           {isSubmitting ? "Вход…" : "Войти"}
