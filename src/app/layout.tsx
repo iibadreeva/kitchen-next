@@ -6,6 +6,7 @@ import "./globals.css";
 import Header from "@/components/UI/header";
 import { siteConfig } from "@/config/site.config";
 import { layoutConfig } from "@/config/layout.config";
+import Title from "@/components/UI/layout/title";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,12 +42,13 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <Providers>
           <Header />
+          <Title />
 
-          <main className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+          <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-2 pb-16 font-sans sm:px-6 sm:pb-20">
             {children}
           </main>
           <footer
-            className="flex items-center justify-center bg-zinc-50 p-4 dark:bg-black"
+            className="flex items-center justify-center p-4"
             style={{ height: layoutConfig.footerHeight }}
           >
             <p>{siteConfig.description}</p>
