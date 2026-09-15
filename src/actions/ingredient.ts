@@ -13,12 +13,12 @@ import {
 import { callAuthRateLimitStore } from "@/utils/auth-store";
 import { getClientIp, UNKNOWN_IP } from "@/utils/client-ip";
 import { consumeRateLimit, refundRateLimit } from "@/utils/rate-limit";
-import type { z } from "zod";
-
-type IngredientInput = z.infer<typeof ingredientCreateSchema>;
+import type { IngredientInput } from "@/types/ingredient";
 
 const CREATE_LIMIT = 30;
 const CREATE_WINDOW_MS = 60 * 60 * 1000;
+/** Верхняя граница списка на странице (без пагинации). */
+const INGREDIENTS_LIST_LIMIT = 200;
 
 function userRateKey(userId: string) {
   return `ingredient:create:user:${userId}`;
@@ -115,7 +115,7 @@ export async function createIngredient(data: IngredientInput) {
         name: ingredient.name,
         category: ingredient.category,
         unit: ingredient.unit,
-        pricePerUnit: ingredient.pricePerUnit.toString(),
+        pricePerUnit: ingredient.pricePerUnit.toNumber(),
         description: ingredient.description,
       },
     };
@@ -139,5 +139,66 @@ export async function createIngredient(data: IngredientInput) {
 
     console.error("Ошибка при создании ингредиента", error);
     return { error: "Ошибка при создании ингредиента" };
+  }
+}
+
+export async function getIngredients() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { error: "Войдите, чтобы увидеть ингредиенты" };
+  }
+
+  try {
+    const ingredients = await prisma.ingredient.findMany({
+      where: { userId },
+      orderBy: { name: "asc" },
+      take: INGREDIENTS_LIST_LIMIT,
+    });
+
+    return {
+      success: true as const,
+      ingredients: ingredients.map((ingredient) => ({
+        id: ingredient.id,
+        name: ingredient.name,
+        category: ingredient.category,
+        unit: ingredient.unit,
+        pricePerUnit: ingredient.pricePerUnit.toNumber(),
+        description: ingredient.description,
+      })),
+    };
+  } catch (error) {
+    console.error("Ошибка при получении ингредиентов", error);
+    return { error: "Ошибка при получении ингредиентов" };
+  }
+}
+
+export async function removeIngredient(id: string) {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { error: "Войдите, чтобы удалить ингредиент" };
+  }
+
+  const ingredientId = id.trim();
+  if (!ingredientId) {
+    return { error: "Некорректный идентификатор" };
+  }
+
+  try {
+    const result = await prisma.ingredient.deleteMany({
+      where: { id: ingredientId, userId },
+    });
+
+    if (result.count === 0) {
+      return { error: "Ингредиент не найден" };
+    }
+
+    revalidatePath("/ingredients");
+
+    return { success: true as const };
+  } catch (error) {
+    console.error("Ошибка при удалении ингредиента", error);
+    return { error: "Ошибка при удалении ингредиента" };
   }
 }

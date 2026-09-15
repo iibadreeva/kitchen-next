@@ -27,11 +27,17 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     ingredient: {
       create: vi.fn(),
+      findMany: vi.fn(),
+      deleteMany: vi.fn(),
     },
   },
 }));
 
-import { createIngredient } from "@/actions/ingredient";
+import {
+  createIngredient,
+  getIngredients,
+  removeIngredient,
+} from "@/actions/ingredient";
 import { auth } from "@/auth/auth";
 import { getClientIp } from "@/utils/client-ip";
 import { consumeRateLimit, refundRateLimit } from "@/utils/rate-limit";
@@ -45,13 +51,15 @@ const validInput = {
   description: "",
 };
 
+const authUser = {
+  user: { id: "user-1", email: "a@b.c" },
+  expires: "2099-01-01",
+} as never;
+
 describe("createIngredient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue({
-      user: { id: "user-1", email: "a@b.c" },
-      expires: "2099-01-01",
-    } as never);
+    vi.mocked(auth).mockResolvedValue(authUser);
     vi.mocked(getClientIp).mockResolvedValue("203.0.113.1");
     vi.mocked(consumeRateLimit).mockResolvedValue({ ok: true });
     vi.mocked(refundRateLimit).mockResolvedValue(undefined);
@@ -103,7 +111,7 @@ describe("createIngredient", () => {
       ingredient: {
         id: "ing-1",
         name: "Морковь",
-        pricePerUnit: "89.5",
+        pricePerUnit: 89.5,
       },
     });
     expect(prisma.ingredient.create).toHaveBeenCalledWith({
@@ -160,5 +168,107 @@ describe("createIngredient", () => {
 
     expect(result.error).toBeTruthy();
     expect(prisma.ingredient.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("getIngredients", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue(authUser);
+  });
+
+  it("отклоняет неавторизованного пользователя", async () => {
+    vi.mocked(auth).mockResolvedValue(null as never);
+
+    const result = await getIngredients();
+
+    expect(result).toEqual({
+      error: "Войдите, чтобы увидеть ингредиенты",
+    });
+    expect(prisma.ingredient.findMany).not.toHaveBeenCalled();
+  });
+
+  it("возвращает ингредиенты текущего пользователя", async () => {
+    vi.mocked(prisma.ingredient.findMany).mockResolvedValue([
+      {
+        id: "ing-1",
+        name: "Морковь",
+        category: "VEGETABLES",
+        unit: "KILOGRAMS",
+        pricePerUnit: new Prisma.Decimal("89.50"),
+        description: null,
+        userId: "user-1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as never);
+
+    const result = await getIngredients();
+
+    expect(result).toEqual({
+      success: true,
+      ingredients: [
+        {
+          id: "ing-1",
+          name: "Морковь",
+          category: "VEGETABLES",
+          unit: "KILOGRAMS",
+          pricePerUnit: 89.5,
+          description: null,
+        },
+      ],
+    });
+    expect(prisma.ingredient.findMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      orderBy: { name: "asc" },
+      take: 200,
+    });
+  });
+});
+
+describe("removeIngredient", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue(authUser);
+  });
+
+  it("отклоняет неавторизованного пользователя", async () => {
+    vi.mocked(auth).mockResolvedValue(null as never);
+
+    const result = await removeIngredient("ing-1");
+
+    expect(result).toEqual({
+      error: "Войдите, чтобы удалить ингредиент",
+    });
+    expect(prisma.ingredient.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("отклоняет пустой id", async () => {
+    const result = await removeIngredient("  ");
+
+    expect(result).toEqual({ error: "Некорректный идентификатор" });
+    expect(prisma.ingredient.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("не удаляет чужой или отсутствующий ингредиент", async () => {
+    vi.mocked(prisma.ingredient.deleteMany).mockResolvedValue({ count: 0 });
+
+    const result = await removeIngredient("ing-foreign");
+
+    expect(result).toEqual({ error: "Ингредиент не найден" });
+    expect(prisma.ingredient.deleteMany).toHaveBeenCalledWith({
+      where: { id: "ing-foreign", userId: "user-1" },
+    });
+  });
+
+  it("удаляет свой ингредиент", async () => {
+    vi.mocked(prisma.ingredient.deleteMany).mockResolvedValue({ count: 1 });
+
+    const result = await removeIngredient("ing-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prisma.ingredient.deleteMany).toHaveBeenCalledWith({
+      where: { id: "ing-1", userId: "user-1" },
+    });
   });
 });

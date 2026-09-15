@@ -25,7 +25,7 @@ import {
   ingredientUnitSchema,
   zodFieldError,
 } from "@/lib/zod";
-import { createIngredient } from "@/actions/ingredient";
+import { useIngredientStore } from "@/store/ingredient.store";
 
 type IngredientFormValues = {
   name: string;
@@ -44,10 +44,11 @@ const emptyForm = (): IngredientFormValues => ({
 });
 
 const IngredientForm = () => {
+  const addIngredient = useIngredientStore((s) => s.addIngredient);
+  const isSubmitting = useIngredientStore((s) => s.isSubmitting);
   const [formData, setFormData] = useState<IngredientFormValues>(emptyForm);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!localError && !successMessage) return;
@@ -73,7 +74,7 @@ const IngredientForm = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isLoading) return;
+    if (isSubmitting) return;
 
     setLocalError(null);
     setSuccessMessage(null);
@@ -84,10 +85,9 @@ const IngredientForm = () => {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const result = await createIngredient(parsed.data);
-      if (result.error) {
+      const result = await addIngredient(parsed.data);
+      if (!result.ok) {
         setLocalError(result.error);
         return;
       }
@@ -96,8 +96,6 @@ const IngredientForm = () => {
       setSuccessMessage("Ингредиент добавлен");
     } catch {
       setLocalError("Не удалось добавить ингредиент");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -109,7 +107,7 @@ const IngredientForm = () => {
         name="name"
         type="text"
         value={formData.name}
-        isDisabled={isLoading}
+        isDisabled={isSubmitting}
         onChange={(value) => updateField("name", value)}
         validate={(value) =>
           zodFieldError(ingredientNameSchema.safeParse(value))
@@ -128,7 +126,7 @@ const IngredientForm = () => {
           name="category"
           placeholder="Выберите"
           value={formData.category || null}
-          isDisabled={isLoading}
+          isDisabled={isSubmitting}
           onChange={onSelectChange("category")}
           validate={(value) =>
             zodFieldError(ingredientCategorySchema.safeParse(value ?? ""))
@@ -163,7 +161,7 @@ const IngredientForm = () => {
           name="unit"
           placeholder="Выберите"
           value={formData.unit || null}
-          isDisabled={isLoading}
+          isDisabled={isSubmitting}
           onChange={onSelectChange("unit")}
           validate={(value) =>
             zodFieldError(ingredientUnitSchema.safeParse(value ?? ""))
@@ -198,7 +196,7 @@ const IngredientForm = () => {
           name="pricePerUnit"
           type="number"
           value={formData.pricePerUnit}
-          isDisabled={isLoading}
+          isDisabled={isSubmitting}
           onChange={(value) => updateField("pricePerUnit", value)}
           validate={(value) =>
             zodFieldError(ingredientPriceSchema.safeParse(value))
@@ -215,7 +213,7 @@ const IngredientForm = () => {
         fullWidth
         name="description"
         value={formData.description}
-        isDisabled={isLoading}
+        isDisabled={isSubmitting}
         onChange={(value) => updateField("description", value)}
         validate={(value) =>
           zodFieldError(ingredientDescriptionSchema.safeParse(value))
@@ -250,7 +248,7 @@ const IngredientForm = () => {
         <Button
           type="submit"
           className={cn("kitchen-form__submit", "site-header__cta")}
-          isPending={isLoading}
+          isPending={isSubmitting}
         >
           {({ isPending }) => (
             <>

@@ -1,4 +1,5 @@
 import { auth } from "@/auth/auth";
+import IngredientsList from "@/components/UI/ingredients/ingredients-list";
 import IngredientForm from "@/forms/ingredient.form";
 
 export default async function Ingredients() {
@@ -18,7 +19,18 @@ export default async function Ingredients() {
         </p>
       </div>
       {isAuthed ? (
-        <IngredientForm />
+        <>
+          <IngredientForm />
+          <div
+            className="ingredient-page__list"
+            aria-labelledby="ingredient-list-title"
+          >
+            <h2 id="ingredient-list-title" className="ingredient-page__title">
+              Ваши ингредиенты
+            </h2>
+            <IngredientsList />
+          </div>
+        </>
       ) : (
         <p className="ingredient-page__guest" role="status">
           Требуется вход в аккаунт.
