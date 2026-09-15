@@ -1,7 +1,11 @@
+"use client";
+
 import { cn } from "@heroui/react";
 
+import { useAuthStore } from "@/store/auth.store";
+
 import { AuthActions } from "./auth-actions";
-import { NAV_ITEMS, isNavActive, type AuthAction } from "./nav-config";
+import { isNavActive, visibleNavItems, type AuthAction } from "./nav-config";
 import { NavLink } from "./nav-link";
 
 export function MobileMenu({
@@ -17,6 +21,12 @@ export function MobileMenu({
   onClose: () => void;
   onAuthAction: (action: AuthAction) => void;
 }) {
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const sessionUser = useAuthStore((s) => s.sessionUser);
+  const isAuthenticated =
+    sessionStatus === "authenticated" && sessionUser != null;
+  const items = visibleNavItems(isAuthenticated);
+
   return (
     <div
       id={id}
@@ -29,7 +39,7 @@ export function MobileMenu({
       )}
     >
       <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4 sm:px-6">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <li key={item.href}>
             <NavLink
               href={item.href}

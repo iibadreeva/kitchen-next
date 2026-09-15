@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   assertRateLimitStoreConfig,
@@ -56,12 +56,11 @@ describe("rate-limit store config", () => {
   });
 
   it("getRateLimitStore в production без Upstash бросает", () => {
-    const prev = process.env.NODE_ENV;
     const prevAllow = process.env.ALLOW_IN_MEMORY_RATE_LIMIT;
     const prevUrl = process.env.UPSTASH_REDIS_REST_URL;
     const prevToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     delete process.env.ALLOW_IN_MEMORY_RATE_LIMIT;
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -70,7 +69,7 @@ describe("rate-limit store config", () => {
     try {
       expect(() => getRateLimitStore()).toThrow(/UPSTASH_REDIS/);
     } finally {
-      process.env.NODE_ENV = prev;
+      vi.unstubAllEnvs();
       if (prevAllow === undefined) delete process.env.ALLOW_IN_MEMORY_RATE_LIMIT;
       else process.env.ALLOW_IN_MEMORY_RATE_LIMIT = prevAllow;
       if (prevUrl === undefined) delete process.env.UPSTASH_REDIS_REST_URL;
